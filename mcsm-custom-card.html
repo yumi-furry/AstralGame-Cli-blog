@@ -49,8 +49,14 @@
 
 <h2 id="code">完整 HTML 代码</h2>
 <div class="code">
-  <div class="code__head"><span>html</span><button class="code__copy" data-copy="<!-- 完整卡片代码较长，请参见博客对应 wiki 页面 mcsm-custom-card.md -->">复制说明</button></div>
-<pre><code>&lt;<!DOCTYPE html>
+  <div class="code__head">
+    <span>html</span>
+    <button class="code__copy" id="copyCodeBtn" type="button">复制代码</button>
+  </div>
+
+  <!-- 卡片源码存放在隐藏 textarea 中，避免被浏览器当标签解析；
+       加载后由下方脚本写入 <pre><code> 并支持一键复制。 -->
+  <textarea id="cardCodeSource" hidden><!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -458,6 +464,7 @@
   // ---------- 初始化 ----------
   (function init() {
     var cfg = loadConfig();
+    // 初始版本号（回退值）：收到 hello / snapshot 后会更新为服务端真实版本
     $('agVersion').textContent = 'v1.4.2_4';
     openConfig();
     if (cfg.url) {
@@ -469,9 +476,10 @@
 })();
 </script>
 </body>
-</html></code></pre>
+</html></textarea>
+
+  <pre><code id="cardCode"></code></pre>
 </div>
-<p class="muted">完整可运行 HTML 代码已在本博客对应的 <a href="index.html">项目介绍</a> 关联的 <code>mcsm-custom-card.md</code> wiki 页面提供。</p>
 
 <h2 id="events">WebSocket 事件与指令</h2>
 <div class="table-wrap">
@@ -498,6 +506,51 @@
 </div>
 
 </div></div>
+
+<!-- 把隐藏 textarea 里的卡片源码注入到代码块，并实现一键复制 -->
+<script>
+(function () {
+  var src = document.getElementById('cardCodeSource');
+  var dst = document.getElementById('cardCode');
+  var btn = document.getElementById('copyCodeBtn');
+  if (!src || !dst) return;
+
+  // textContent 会自动把 < > & 转义，因此不会触发解析
+  dst.textContent = src.value;
+
+  function setBtnText(text) {
+    if (!btn) return;
+    var old = btn.textContent;
+    btn.textContent = text;
+    setTimeout(function () { btn.textContent = old; }, 1500);
+  }
+
+  if (btn && navigator.clipboard && navigator.clipboard.writeText) {
+    btn.addEventListener('click', function () {
+      navigator.clipboard.writeText(src.value).then(function () {
+        setBtnText('已复制 ✓');
+      }).catch(function () {
+        // 回退：选中 + execCommand
+        src.removeAttribute('hidden');
+        src.select();
+        try { document.execCommand('copy'); setBtnText('已复制 ✓'); }
+        catch (e) { setBtnText('复制失败'); }
+        src.setAttribute('hidden', '');
+      });
+    });
+  } else if (btn) {
+    // 不支持 clipboard API 的浏览器
+    btn.addEventListener('click', function () {
+      src.removeAttribute('hidden');
+      src.select();
+      try { document.execCommand('copy'); setBtnText('已复制 ✓'); }
+      catch (e) { setBtnText('复制失败'); }
+      src.setAttribute('hidden', '');
+    });
+  }
+})();
+</script>
+
 <script src="assets/nav.js"></script>
 </body>
 </html>
