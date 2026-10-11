@@ -1,0 +1,11 @@
+# GitHub Pages 配置（AstralGame-Cli-blog）
+# 纯静态 HTML 站点：直接以仓库根目录托管，Jekyll 仅原样拷贝文件。
+# 首页为 index.html；侧边栏与顶栏由 assets/nav.js 注入。
+
+include:
+  - assets
+  - screenshot.png
+  - "*.html"
+
+# 不做任何 markdown 转换，避免误处理
+markdown: none

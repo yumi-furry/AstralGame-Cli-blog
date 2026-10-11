@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCSM 自定义卡片 | Astral Game CLI</title>
+<meta name="description" content="通过 WebSocket 实时卡片接入 MCSM 管理面板，显示服务器状态与成员列表。">
+<link rel="icon" type="image/png" href="./screenshot.png">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="mcsm-custom-card">
+<div class="content"><div class="main">
+
+<div class="page-head">
+  <h1>通过自定义 HTML 卡片接入 MCSM 管理面板</h1>
+  <p class="lead">把 AstralGame 服务器状态与当前房间成员列表（名字、延迟）以一张实时 WebSocket 卡片嵌入 MCSM 面板。</p>
+</div>
+
+<h2 id="principle">接入原理</h2>
+<p>MCSManager 支持添加「自定义 HTML」类型的应用卡片。卡片通过 <code>/api/ws/service</code> 连接 CLI，实时推送服务器状态与房间事件，并支持卡片内可视化配置连接。</p>
+<ol>
+  <li>卡片顶部配置区：填 WS 地址、密钥、服务名称、服务类型后点「连接」；</li>
+  <li>通过 <code>ws://&lt;地址&gt;/api/ws/service?key=...&amp;name=...&amp;type=...</code> 建立 WebSocket（系统随机密钥鉴权）；</li>
+  <li>连接成功收到 <code>hello</code> 后，发送只读指令 <code>get_room_info</code> 获取服务器状态与成员列表；</li>
+  <li>持续接收 <code>snapshot</code> / <code>room.created</code> / <code>room.joined</code> / <code>room.left</code> / <code>server.started</code> 事件实时更新，并定时重发 <code>get_room_info</code>；</li>
+  <li>点击「退出」按钮断开连接，配置可重新编辑。</li>
+</ol>
+
+<div class="note note--warn"><strong>重要：WS 地址必须填公网可达的地址。</strong> MCSM 的 HTML 卡片本质上是一个独立的小浏览器，在访问面板的那台机器上发起 WebSocket 请求，而非 astral-server 所在服务器。不能填 <code>127.0.0.1</code> 或 <code>localhost</code>；须填写从访问面板的机器能连通的地止（公网 IP / 域名 + 端口），必要时为 <code>/api/ws/service</code> 配置公网映射 / 反向代理。</div>
+
+<h2 id="prereq">前置条件</h2>
+<ul>
+  <li><code>astral-server</code> 已运行，Web 管理端可访问（默认 <code>http://&lt;服务器IP&gt;:8080</code>）；</li>
+  <li>需要知道第三方服务连接密钥 <code>ws_key</code>（面板「设置 → 第三方服务」查看与复制）；</li>
+  <li><code>get_room_info</code> 为只读指令，不受 <code>service_control_enabled</code> 开关限制。</li>
+</ul>
+
+<h2 id="config">卡片内配置项</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>配置项</th><th>说明</th><th>示例</th></tr></thead>
+    <tbody>
+      <tr><td>WS 地址</td><td>服务地址（卡片自动拼 <code>/api/ws/service</code>）</td><td><code>ws://192.168.1.10:8080</code></td></tr>
+      <tr><td>服务密钥</td><td>面板中的 <code>ws_key</code></td><td><code>a1b2c3…</code></td></tr>
+      <tr><td>服务名称 / 类型</td><td>上报显示在在线服务列表</td><td><code>MyCard</code> / <code>MCSM</code></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2 id="code">完整 HTML 代码</h2>
+<div class="code">
+  <div class="code__head"><span>html</span><button class="code__copy" data-copy="<!-- 完整卡片代码较长，请参见博客对应 wiki 页面 mcsm-custom-card.md -->">复制说明</button></div>
+<pre><code>&lt;!-- 完整实现见 wiki 页面 mcsm-custom-card.md --
+    核心：WebSocket 连接 /api/ws/service，
+    发 {"action":"get_room_info"} 拉取成员，
+    渲染 members 的 hostname 与 latency_ms（<80/<200/≥200 ms 分色），
+    过滤 cost>1 的中继节点，配置存 localStorage，
+    提供「配置」与「退出」按钮。</code></pre>
+</div>
+<p class="muted">完整可运行 HTML 代码已在本博客对应的 <a href="index.html">项目介绍</a> 关联的 <code>mcsm-custom-card.md</code> wiki 页面提供。</p>
+
+<h2 id="events">WebSocket 事件与指令</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>事件 / 指令</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>hello</code></td><td>连接认证成功后首帧（含连接 ID、名称、类型）</td></tr>
+      <tr><td><code>snapshot</code> / <code>server.started</code></td><td>连接后快照 / 服务启动</td></tr>
+      <tr><td><code>room.created</code> / <code>room.joined</code> / <code>room.left</code></td><td>房间创建 / 加入 / 离开</td></tr>
+      <tr><td><code>get_room_info</code></td><td>只读指令，应答 <code>result</code>，<code>data</code> 含 <code>running</code>、<code>uptime_secs</code>、<code>room</code>、<code>share_url</code>、<code>node</code>、<code>members</code></td></tr>
+    </tbody>
+  </table>
+</div>
+<p class="muted">成员 <code>cost</code>：<code>0</code> = 本机，<code>1</code> = 直连，<code>&gt;1</code> = 经中继。卡片默认过滤 <code>cost &gt; 1</code> 的中继节点。</p>
+
+<div class="related">
+  <h3>相关页面</h3>
+  <ul>
+    <li><a href="websocket-events.html">WebSocket 事件推送</a></li>
+    <li><a href="rooms.html">联机房间操作</a></li>
+    <li><a href="rest-api.html">REST API 参考</a></li>
+    <li><a href="configuration.html">配置参考</a></li>
+  </ul>
+</div>
+
+</div></div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

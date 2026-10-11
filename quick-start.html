@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>快速开始 | Astral Game CLI</title>
+<meta name="description" content="二进制部署、注册 systemd 服务、.deb 打包，让服务器重启后自动恢复房间。">
+<link rel="icon" type="image/png" href="./screenshot.png">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="quick-start">
+<div class="content"><div class="main">
+
+<div class="page-head">
+  <h1>快速开始</h1>
+  <p class="lead">在 Debian / Ubuntu 无头服务器上部署 Astral Game P2P Server，并注册为 systemd 服务后台运行。</p>
+</div>
+
+<h2 id="structure">部署目录结构</h2>
+<div class="code">
+  <div class="code__head"><span>目录结构</span></div>
+<pre><code>/opt/astral-server/            # 部署后统一目录
+├── astral-server              # 可执行文件
+├── config.toml                # 配置文件（Web 端口、账号密码等）
+├── servers.json               # 服务器列表数据（自动生成）
+└── Email/                     # 邮件模板（首次运行自动生成，可自由编辑）
+    ├── room_notification.html
+    └── room_notification.txt</code></pre>
+</div>
+<p class="muted">其他运行期数据（<code>avatar.bin</code> 头像、<code>ws_key</code> 等）同样落在可执行文件同目录，符合「单目录即可维护整套服务」的部署约定。</p>
+
+<h2 id="deploy">方式一：直接上传已编译版本（推荐）</h2>
+
+<h3>1. 上传文件</h3>
+<div class="code">
+  <div class="code__head"><span>bash</span><button class="code__copy" data-copy="scp astral-server user@your-server:/tmp/
+scp config.toml user@your-server:/tmp/">复制</button></div>
+<pre><code>scp astral-server user@your-server:/tmp/
+scp config.toml user@your-server:/tmp/</code></pre>
+</div>
+
+<h3>2. 安装到统一目录</h3>
+<div class="code">
+  <div class="code__head"><span>bash</span><button class="code__copy" data-copy="sudo mkdir -p /opt/astral-server
+sudo cp /tmp/astral-server /opt/astral-server/
+sudo cp /tmp/config.toml /opt/astral-server/
+sudo chmod 755 /opt/astral-server/astral-server
+sudo chown -R root:root /opt/astral-server">复制</button></div>
+<pre><code>sudo mkdir -p /opt/astral-server
+sudo cp /tmp/astral-server /opt/astral-server/
+sudo cp /tmp/config.toml /opt/astral-server/
+sudo chmod 755 /opt/astral-server/astral-server
+sudo chown -R root:root /opt/astral-server</code></pre>
+</div>
+
+<h3>3. 直接运行（前台测试）</h3>
+<div class="code">
+  <div class="code__head"><span>bash</span><button class="code__copy" data-copy="cd /opt/astral-server
+sudo ./astral-server run">复制</button></div>
+<pre><code>cd /opt/astral-server
+sudo ./astral-server run</code></pre>
+</div>
+<p>浏览器访问 <code>http://服务器IP:端口</code> 即可打开 Web 管理端（端口默认 <code>8080</code>，见 <a href="configuration.html">配置参考</a>）。</p>
+
+<h3>4. 注册为系统服务（后台运行）</h3>
+<p>将以下内容保存为 <code>/etc/systemd/system/astral-server.service</code>：</p>
+<div class="code">
+  <div class="code__head"><span>ini</span><button class="code__copy" data-copy="[Unit]
+Description=Astral Game P2P Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/astral-server
+ExecStart=/opt/astral-server/astral-server run
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+LimitNOFILE=1048576
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target">复制</button></div>
+<pre><code>[Unit]
+Description=Astral Game P2P Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/astral-server
+ExecStart=/opt/astral-server/astral-server run
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+LimitNOFILE=1048576
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+</div>
+
+<h3>5. 服务管理命令</h3>
+<div class="code">
+  <div class="code__head"><span>bash</span><button class="code__copy" data-copy="sudo systemctl start astral-server
+sudo systemctl stop astral-server
+sudo systemctl restart astral-server
+sudo systemctl status astral-server
+sudo systemctl enable astral-server
+sudo systemctl disable astral-server
+sudo journalctl -u astral-server -f">复制</button></div>
+<pre><code>sudo systemctl start astral-server
+sudo systemctl stop astral-server
+sudo systemctl restart astral-server
+sudo systemctl status astral-server
+sudo systemctl enable astral-server
+sudo systemctl disable astral-server
+sudo journalctl -u astral-server -f</code></pre>
+</div>
+
+<h2 id="deb">方式二：使用 .deb 安装包（可选）</h2>
+<p>仓库提供 <code>deploy/build-deb.sh</code> 打包脚本，可生成符合 FHS 布局的 <code>.deb</code> 包：</p>
+<div class="code">
+  <div class="code__head"><span>bash</span><button class="code__copy" data-copy="bash deploy/build-deb.sh
+bash deploy/build-deb.sh arm64 aarch64-unknown-linux-gnu">复制</button></div>
+<pre><code>bash deploy/build-deb.sh
+bash deploy/build-deb.sh arm64 aarch64-unknown-linux-gnu</code></pre>
+</div>
+<p>包内默认安装到 <code>/usr/bin/astral-server</code>、<code>/etc/astral-server/config.toml</code> 与 systemd 单元文件；升级时通过 <code>conffiles</code> 保留用户已修改的配置。详见 <a href="build-from-source.html">从源码编译</a>。</p>
+
+<h2 id="source">从源码编译</h2>
+<p>如果自行编译，参见 <a href="build-from-source.html">从源码编译</a>。</p>
+
+<div class="related">
+  <h3>相关页面</h3>
+  <ul>
+    <li><a href="configuration.html">配置参考</a></li>
+    <li><a href="cli-commands.html">命令行接口 CLI</a></li>
+    <li><a href="build-from-source.html">从源码编译</a></li>
+  </ul>
+</div>
+
+</div></div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

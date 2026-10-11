@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SMTP 邮件通知 | Astral Game CLI</title>
+<meta name="description" content="SMTP 配置、收件人维护、测试/一键发信、模板变量与常见邮箱参数。">
+<link rel="icon" type="image/png" href="./screenshot.png">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="smtp-notifications">
+<div class="content"><div class="main">
+
+<div class="page-head">
+  <h1>SMTP 邮件通知</h1>
+  <p class="lead">当服务器重启、或房间码发生变动时，系统会自动发送同风格 HTML 邮件给收件人列表。</p>
+</div>
+
+<h2 id="config">第 1 步：配置 SMTP 服务器</h2>
+<div class="code">
+  <div class="code__head"><span>toml</span></div>
+<pre><code>[astral_server.smtp]
+enabled = true
+host = "smtp.qq.com"          # 见下表
+port = 465
+username = "your_mail@qq.com"
+password = "授权码"            # 注意是 SMTP 授权码，不是邮箱登录密码
+from_name = "Astral Server"
+from_email = "your_mail@qq.com"
+encryption = "tls"            # 465 端口用 tls；587 用 starttls；内网不加密用 none
+recipients = ["friend@example.com"]</code></pre>
+</div>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>字段</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>host</code></td><td>SMTP 服务器主机</td></tr>
+      <tr><td><code>port</code></td><td>SMTP 端口（TLS 一般 465，STARTTLS 一般 587）</td></tr>
+      <tr><td><code>username</code> / <code>password</code></td><td>登录用户名 / SMTP 授权码</td></tr>
+      <tr><td><code>from_name</code> / <code>from_email</code></td><td>发件人显示名 / 邮箱</td></tr>
+      <tr><td><code>encryption</code></td><td><code>tls</code> / <code>starttls</code> / <code>none</code></td></tr>
+      <tr><td><code>recipients</code></td><td>收件人邮箱列表（面板可维护并写回）</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2 id="test">第 2 步：维护收件人并测试</h2>
+<p>重启服务后，打开面板「设置 → 邮件通知」：</p>
+<ul>
+  <li>查看服务器配置摘要（主机、端口、加密方式、授权码是否已设置）；</li>
+  <li>「收件人邮箱」每行一个邮箱，点「保存收件人」（自动去重并校验格式）；</li>
+  <li>点「发送测试邮件」，收到即配置成功；</li>
+  <li>点「一键发信」，立即将当前房间详情发给所有收件人；无房间时提示先创建或加入。</li>
+</ul>
+
+<h2 id="common">常见邮箱参数</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>邮箱</th><th>host</th><th>端口 / 加密</th><th>授权码获取方式</th></tr></thead>
+    <tbody>
+      <tr><td>QQ 邮箱</td><td><code>smtp.qq.com</code></td><td>465 / tls（或 587 / starttls）</td><td>设置 → 账号 → POP3/SMTP 服务 → 开启 → 生成授权码</td></tr>
+      <tr><td>163 邮箱</td><td><code>smtp.163.com</code></td><td>465 / tls</td><td>设置 → POP3/SMTP/IMAP → 开启 SMTP → 客户端授权码</td></tr>
+      <tr><td>Gmail</td><td><code>smtp.gmail.com</code></td><td>465 / tls（或 587 / starttls）</td><td>两步验证后生成「应用专用密码」；国内通常无法直连</td></tr>
+      <tr><td>Outlook</td><td><code>smtp.office365.com</code></td><td>587 / starttls</td><td>账号密码（部分账号需 OAuth）</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="note note--warn">注意事项：<code>password</code> 填授权码 / 应用专用密码；授权码存于 <code>config.toml</code>，请 <code>chmod 600</code>，面板接口不回传密码；邮件只在存在房间时发送；发送失败只记警告日志。</div>
+
+<h2 id="template">邮件模板自定义</h2>
+<p>首次运行后自动生成 <code>Email/</code> 文件夹：<code>room_notification.html</code>（HTML 模板）与 <code>room_notification.txt</code>（纯文本模板）。直接编辑即可，无需重启（每次发信实时读取）。</p>
+<h3>模板变量</h3>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>变量</th><th>释义</th></tr></thead>
+    <tbody>
+      <tr><td><code>{{EVENT_TITLE}}</code></td><td>事件标题</td></tr>
+      <tr><td><code>{{EVENT_DESC}}</code></td><td>事件描述</td></tr>
+      <tr><td><code>{{GAME_NAME}}</code> / <code>{{GAME_ID}}</code></td><td>游戏名称 / 标识</td></tr>
+      <tr><td><code>{{SHORT_CODE}}</code></td><td>房间码（短码或离线邀请串）</td></tr>
+      <tr><td><code>{{CODE_HINT}}</code></td><td>房间码提示文字</td></tr>
+      <tr><td><code>{{SHARE_URL}}</code></td><td>邀请链接</td></tr>
+      <tr><td><code>{{RUNNING}}</code></td><td>运行状态</td></tr>
+      <tr><td><code>{{TOTAL_NODES}}</code></td><td>在线节点数</td></tr>
+      <tr><td><code>{{SERVER_VERSION}}</code></td><td>服务器版本</td></tr>
+    </tbody>
+  </table>
+</div>
+<p class="muted">变量值已做 HTML 转义，可直接在 HTML 模板中使用。房间码优先取短码；服务不可用时回退为 <code>AG1.</code> 离线串。</p>
+
+<div class="related">
+  <h3>相关页面</h3>
+  <ul>
+    <li><a href="configuration.html">配置参考</a></li>
+    <li><a href="rest-api.html">REST API 参考</a></li>
+    <li><a href="websocket-events.html">WebSocket 事件推送</a></li>
+  </ul>
+</div>
+
+</div></div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WebSocket 事件推送 | Astral Game CLI</title>
+<meta name="description" content="面板端 /api/ws 与第三方 /api/ws/service 的事件类型、消息格式、鉴权差异与控制指令协议。">
+<link rel="icon" type="image/png" href="./screenshot.png">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="websocket-events">
+<div class="content"><div class="main">
+
+<div class="page-head">
+  <h1>WebSocket 事件推送</h1>
+  <p class="lead">第三方软件可通过 WebSocket 实时获取房间内容、房间码与运行状态，无需轮询。1.4.2_4 起支持发送控制指令。</p>
+</div>
+
+<h2 id="endpoints">两个端点与鉴权差异</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>端点</th><th>面向对象</th><th>鉴权方式</th></tr></thead>
+    <tbody>
+      <tr><td><code>/api/ws</code></td><td>浏览器面板</td><td>与 REST 一致：Cookie 会话或 Basic Auth（<code>ws://admin:password@host:port/api/ws</code>）</td></tr>
+      <tr><td><code>/api/ws/service?key=&amp;name=&amp;type=</code></td><td>AstrBOT 等第三方服务</td><td>系统随机密钥 <code>ws_key</code>，不走面板账号</td></tr>
+    </tbody>
+  </table>
+</div>
+<p class="note">第三方服务端点：密钥启动时自动生成（也可手动指定 <code>ws_key</code>）；刷新密钥后旧密钥立即失效，已连接服务被断开。</p>
+
+<h2 id="events">事件类型</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>事件</th><th>触发时机</th><th>room 字段</th></tr></thead>
+    <tbody>
+      <tr><td><code>snapshot</code></td><td>连接建立后立即推送</td><td>当前房间或 <code>null</code></td></tr>
+      <tr><td><code>server.started</code></td><td>服务启动完成（重启后自动恢复房间）</td><td>当前房间或 <code>null</code></td></tr>
+      <tr><td><code>room.created</code></td><td>服务器创建新房间</td><td>新房间</td></tr>
+      <tr><td><code>room.joined</code></td><td>服务器加入目标房间</td><td>目标房间</td></tr>
+      <tr><td><code>room.left</code></td><td>服务器离开房间</td><td><code>null</code></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2 id="message">消息格式</h2>
+<div class="code">
+  <div class="code__head"><span>json</span></div>
+<pre><code>{
+  "event": "room.created",
+  "timestamp": 1728038400,
+  "running": true,
+  "room": {
+    "is_host": true,
+    "game_id": "minecraft",
+    "game_name": "我的世界",
+    "network_name": "ag_ab12cd34ef",
+    "network_secret": "xxxxxxxxxxxxxxxx",
+    "display_name": "我的世界",
+    "short_code": "ABC123",
+    "offline_invite": "AG1.xxxxx…",
+    "peers": [{ "uri": "tcp://game.example.com:11010" }]
+  },
+  "share_url": "https://next.astral.fan/j?c=ABC123",
+  "node": {
+    "my_ipv4": "10.126.0.2",
+    "total_nodes": 3,
+    "error": null,
+    "server_version": "1.4.2_4",
+    "easytier_version": "1.x.x"
+  }
+}</code></pre>
+</div>
+
+<h2 id="example">调用示例</h2>
+<div class="code">
+  <div class="code__head"><span>javascript</span></div>
+<pre><code>const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+const ws = new WebSocket(`${proto}://${location.host}/api/ws`);
+
+ws.onmessage = (e) => {
+  const msg = JSON.parse(e.data);
+  if (msg.room) {
+    console.log('房间码：', msg.room.short_code);
+    console.log('邀请链接：', msg.share_url);
+  }
+};</code></pre>
+</div>
+
+<h2 id="service">第三方服务指令协议（1.4.2_4 起）</h2>
+<p>连接成功后除被动接收事件外，可发送指令并收到应答。控制类指令需开启 <code>service_control_enabled</code>；只读 <code>get_room_info</code> 不受限制。</p>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>action</th><th>说明</th><th>额外字段</th></tr></thead>
+    <tbody>
+      <tr><td><code>get_room_info</code></td><td>查询房间类型、成员列表（含延迟）、运行时长</td><td>无</td></tr>
+      <tr><td><code>restart</code></td><td>用最近一次配置重启实例</td><td>无</td></tr>
+      <tr><td><code>close</code></td><td>关闭房间（停止实例并清空当前房间）</td><td>无</td></tr>
+      <tr><td><code>open</code></td><td>开启房间（带 <code>game_id</code>/<code>game_name</code> 建房；不带则重放上次配置）</td><td><code>game_id</code>、<code>game_name</code>、<code>display_name</code></td></tr>
+      <tr><td><code>join</code></td><td>加入房间</td><td><code>input</code>（短码 / 链接 / <code>AG1.</code> 离线串）</td></tr>
+    </tbody>
+  </table>
+</div>
+<div class="code">
+  <div class="code__head"><span>json</span></div>
+<pre><code>{"id":"r1","action":"get_room_info"}
+{"id":"r4","action":"open","game_id":"minecraft","game_name":"我的世界"}
+{"id":"r6","action":"join","input":"ABC123"}</code></pre>
+</div>
+<p>应答统一为 <code>{"event":"result","id":...,"ok":bool,"error":...,"data":...}</code>。<code>get_room_info</code> 的 <code>data</code> 含 <code>running</code>、<code>uptime_secs</code>、<code>room</code>、<code>share_url</code>、<code>node</code>、<code>members</code>（成员含 <code>latency_ms</code> 实测延迟与 <code>loss_rate</code>）。</p>
+
+<h2 id="manage">管理接口</h2>
+<div class="code">
+  <div class="code__head"><span>bash</span><button class="code__copy" data-copy="curl -u admin:password http://<服务器>:1786/api/ws/key
+curl -u admin:password -X POST http://<服务器>:1786/api/ws/key/rotate
+curl -u admin:password http://<服务器>:1786/api/ws/services">复制</button></div>
+<pre><code>curl -u admin:password http://&lt;服务器&gt;:1786/api/ws/key
+curl -u admin:password -X POST http://&lt;服务器&gt;:1786/api/ws/key/rotate
+curl -u admin:password http://&lt;服务器&gt;:1786/api/ws/services</code></pre>
+</div>
+
+<div class="related">
+  <h3>相关页面</h3>
+  <ul>
+    <li><a href="rest-api.html">REST API 参考</a></li>
+    <li><a href="configuration.html">配置参考</a></li>
+    <li><a href="rooms.html">联机房间操作</a></li>
+    <li><a href="mcsm-custom-card.html">MCSM 自定义卡片</a></li>
+  </ul>
+</div>
+
+</div></div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

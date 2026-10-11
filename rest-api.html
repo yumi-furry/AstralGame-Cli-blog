@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>REST API 参考 | Astral Game CLI</title>
+<meta name="description" content="全部 /api 业务端点、Cookie/Basic 鉴权方式与 curl 调用示例。">
+<link rel="icon" type="image/png" href="./screenshot.png">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="rest-api">
+<div class="content"><div class="main">
+
+<div class="page-head">
+  <h1>REST API 参考</h1>
+  <p class="lead">所有业务接口挂在 <code>/api</code> 下，除登录 / 登出与第三方 WebSocket 服务端点外，统一经过鉴权中间件。</p>
+</div>
+
+<h2 id="auth">鉴权方式</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>方式</th><th>适用场景</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>Cookie 会话</td><td>浏览器面板</td><td>登录下发的 <code>astral_session</code> Cookie（HttpOnly + SameSite=Lax）；重启后失效</td></tr>
+      <tr><td>HTTP Basic Auth</td><td>curl / 外部脚本</td><td><code>Authorization: Basic base64(username:password)</code>，用户名不允许含 <code>:</code></td></tr>
+    </tbody>
+  </table>
+</div>
+<p>未配置用户名（<code>username</code> 为空）时关闭鉴权。未通过鉴权返回 <code>401 {"error":"unauthorized"}</code>。</p>
+
+<h2 id="endpoints">路由总览</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>接口</th><th>方法</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>/api/status</code></td><td>GET</td><td>节点状态快照（前端 3 秒轮询）</td></tr>
+      <tr><td><code>/api/logs?tail=N</code></td><td>GET</td><td>节点日志，默认 200 条、上限 800 条</td></tr>
+      <tr><td><code>/api/profile</code></td><td>GET/PUT</td><td>资料 / 网络 / 守护进程设置（头像 base64 内联）</td></tr>
+      <tr><td><code>/api/config</code></td><td>GET/PUT</td><td>读取 / 保存 config.toml</td></tr>
+      <tr><td><code>/api/start</code></td><td>POST</td><td>启动（重启）EasyTier 实例，可携带完整 TOML</td></tr>
+      <tr><td><code>/api/stop</code></td><td>POST</td><td>停止当前实例</td></tr>
+      <tr><td><code>/api/restart</code></td><td>POST</td><td>用最近一次配置重启实例</td></tr>
+      <tr><td><code>/api/credentials</code></td><td>GET/POST/DELETE</td><td>进网凭据生成 / 列表 / 撤销（<code>ttl_seconds</code>、<code>reusable</code>）</td></tr>
+      <tr><td><code>/api/room/create</code></td><td>POST</td><td>创建房间</td></tr>
+      <tr><td><code>/api/room/join</code></td><td>POST</td><td>加入房间</td></tr>
+      <tr><td><code>/api/room/leave</code></td><td>POST</td><td>离开房间</td></tr>
+      <tr><td><code>/api/room/current</code></td><td>GET</td><td>当前房间与分享链接</td></tr>
+      <tr><td><code>/api/servers</code></td><td>GET/POST</td><td>服务器列表 / 新增</td></tr>
+      <tr><td><code>/api/servers/ping</code></td><td>GET</td><td>并发测速，返回 TCP 连接耗时</td></tr>
+      <tr><td><code>/api/servers/:id</code></td><td>PUT/DELETE</td><td>修改 / 删除服务器</td></tr>
+      <tr><td><code>/api/games</code></td><td>GET</td><td>内置游戏目录</td></tr>
+      <tr><td><code>/api/ws</code></td><td>GET</td><td>面板端 WebSocket 升级</td></tr>
+      <tr><td><code>/api/ws/service</code></td><td>GET</td><td>第三方服务 WebSocket（<code>ws_key</code> 鉴权）</td></tr>
+      <tr><td><code>/api/ws/key</code></td><td>GET</td><td>查看第三方服务密钥</td></tr>
+      <tr><td><code>/api/ws/key/rotate</code></td><td>POST</td><td>刷新密钥（旧密钥失效，已连接服务断开）</td></tr>
+      <tr><td><code>/api/ws/services</code></td><td>GET</td><td>在线第三方服务列表</td></tr>
+      <tr><td><code>/api/smtp</code></td><td>GET</td><td>SMTP 配置摘要（密码不回传）</td></tr>
+      <tr><td><code>/api/smtp/recipients</code></td><td>PUT</td><td>更新收件人列表</td></tr>
+      <tr><td><code>/api/smtp/test</code></td><td>POST</td><td>发送测试邮件</td></tr>
+      <tr><td><code>/api/smtp/send-now</code></td><td>POST</td><td>一键发送当前房间详情</td></tr>
+      <tr><td><code>/api/update/check</code></td><td>GET</td><td>检查 GitHub 最新发行版</td></tr>
+      <tr><td><code>/api/update/apply</code></td><td>POST</td><td>应用更新（<code>download_url</code>，仅 GitHub 白名单域名）</td></tr>
+      <tr><td><code>/api/auth/login</code></td><td>POST</td><td>登录（免鉴权）</td></tr>
+      <tr><td><code>/api/auth/logout</code></td><td>POST</td><td>登出（免鉴权）</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2 id="example">调用示例</h2>
+<div class="code">
+  <div class="code__head"><span>bash</span><button class="code__copy" data-copy="curl -c cookies.txt -X POST http://<服务器>:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"yourpass"}'
+
+curl -b cookies.txt http://<服务器>:8080/api/status
+curl -u admin:password http://<服务器>:8080/api/room/current
+curl -u admin:password -X POST http://<服务器>:8080/api/room/leave
+curl -u admin:password -X POST http://<服务器>:8080/api/smtp/test">复制</button></div>
+<pre><code># 登录并取得 Cookie
+curl -c cookies.txt -X POST http://&lt;服务器&gt;:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"yourpass"}'
+
+# Cookie 获取状态
+curl -b cookies.txt http://&lt;服务器&gt;:8080/api/status
+
+# 或直接 Basic Auth
+curl -u admin:password http://&lt;服务器&gt;:8080/api/room/current
+curl -u admin:password -X POST http://&lt;服务器&gt;:8080/api/room/leave
+curl -u admin:password -X POST http://&lt;服务器&gt;:8080/api/smtp/test</code></pre>
+</div>
+<p class="muted">错误响应统一为 <code>{"error":"..."}</code> 并携带对应 HTTP 状态码。</p>
+
+<div class="related">
+  <h3>相关页面</h3>
+  <ul>
+    <li><a href="websocket-events.html">WebSocket 事件推送</a></li>
+    <li><a href="rooms.html">联机房间操作</a></li>
+    <li><a href="relay-servers.html">中继服务器与游戏目录</a></li>
+    <li><a href="smtp-notifications.html">SMTP 邮件通知</a></li>
+  </ul>
+</div>
+
+</div></div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

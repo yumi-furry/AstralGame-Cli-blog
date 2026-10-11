@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>在线更新 | Astral Game CLI</title>
+<meta name="description" content="GitHub Release 版本检查与域名白名单下载应用。">
+<link rel="icon" type="image/png" href="./screenshot.png">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="online-update">
+<div class="content"><div class="main">
+
+<div class="page-head">
+  <h1>在线更新</h1>
+  <p class="lead">服务器可从 GitHub Releases 检查最新版本并在线下载应用，替换自身二进制后自动重启服务。</p>
+</div>
+
+<h2 id="version">版本约定</h2>
+<p><code>Cargo.toml</code> 使用 semver 构建号写法（如 <code>1.4.2-4</code>），运行时 / API 展示统一转换为下划线写法（如 <code>1.4.2_4</code>）；解析时两种写法等价。</p>
+
+<h2 id="check">检查更新</h2>
+<p><code>GET /api/update/check</code> 请求 GitHub Releases API（匿名限流 60 次/小时/IP），返回：</p>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>字段</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>current_version</code></td><td>当前版本</td></tr>
+      <tr><td><code>latest_version</code> / <code>latest_name</code></td><td>最新 tag / release 标题</td></tr>
+      <tr><td><code>update_available</code></td><td>是否有更新（语义版本比较）</td></tr>
+      <tr><td><code>release_notes</code> / <code>release_url</code></td><td>更新说明 / release 页</td></tr>
+      <tr><td><code>download_url</code></td><td>linux x86_64 资产直链（无匹配时为 <code>null</code>）</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2 id="apply">应用更新</h2>
+<p><code>POST /api/update/apply</code>，请求体 <code>download_url</code>。<strong>安全白名单</strong>只允许从以下域名下载：</p>
+<ul>
+  <li><code>https://github.com/</code></li>
+  <li><code>https://objects.githubusercontent.com/</code></li>
+  <li><code>https://release-assets.githubusercontent.com/</code></li>
+</ul>
+<h3>替换流程（仅 Linux 生效）</h3>
+<ol>
+  <li>下载新二进制到 <code>&lt;exe&gt;.new</code>（300 秒超时）；</li>
+  <li><code>chmod 755</code> 赋予执行权限；</li>
+  <li>旧文件改名 <code>&lt;exe&gt;.bak</code>；</li>
+  <li><code>.new</code> 原子 <code>rename</code> 为当前路径；</li>
+  <li><code>sleep 1 &amp;&amp; systemctl restart astral-server</code>（<code>nohup</code> 脱离父进程执行）。</li>
+</ol>
+<p class="muted">Windows 等非 Unix 平台暂不支持自动重启。</p>
+
+<div class="related">
+  <h3>相关页面</h3>
+  <ul>
+    <li><a href="rest-api.html">REST API 参考</a></li>
+    <li><a href="index.html">项目介绍</a></li>
+    <li><a href="build-from-source.html">从源码编译</a></li>
+  </ul>
+</div>
+
+</div></div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

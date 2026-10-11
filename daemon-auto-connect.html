@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>守护进程自动联网 | Astral Game CLI</title>
+<meta name="description" content="开机自动加入 / 自动创建预设房间（二选一）的配置与优先级。">
+<link rel="icon" type="image/png" href="./screenshot.png">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="daemon-auto-connect">
+<div class="content"><div class="main">
+
+<div class="page-head">
+  <h1>守护进程自动联网</h1>
+  <p class="lead">服务器重启（如断电、系统更新）后，服务会自动加入或创建事先设置好的房间，无需人工操作。</p>
+</div>
+
+<h2 id="modes">两种模式（二选一）</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>模式</th><th>面板配置</th><th>配置文件配置</th><th>效果</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>自动加入已有房间</td>
+        <td>设置页「开机自动运行 → 自动加入」，打开开关、填入房间邀请后保存</td>
+        <td><code>auto_join_enabled = true</code> 与 <code>auto_join_code</code></td>
+        <td>服务启动后自动加入预设房间</td>
+      </tr>
+      <tr>
+        <td>自动创建预设房间</td>
+        <td>设置页「开机自动运行 → 自动创建」，选好游戏后保存</td>
+        <td><code>auto_create_enabled = true</code>、<code>auto_create_game_id</code>、<code>auto_create_game_name</code></td>
+        <td>服务启动后自动创建预设房间</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<p><code>auto_join_code</code> 支持三种邀请形式：6 位短码（<code>ABC123</code>）、完整邀请链接（<code>https://next.astral.fan/j?c=...</code>）、或 <code>AG1.</code> 开头的离线邀请串。</p>
+
+<h2 id="priority">优先级与互斥</h2>
+<ul>
+  <li>同时启用两者时，<strong>自动创建优先</strong>；面板与 API 会在保存时强制互斥（启用自动加入则关闭自动创建，反之亦然）；</li>
+  <li>启用自动加入但邀请为空 → 保存校验失败；启用自动创建但未选游戏 → 保存校验失败；</li>
+  <li>服务日志出现「守护进程：已自动加入/创建房间」即表示成功；</li>
+  <li>自动失败<strong>不影响</strong> Web 面板使用，可在面板「联机」页手动创建或加入。</li>
+</ul>
+
+<h2 id="flow">启动流程</h2>
+<ol>
+  <li>配置了 <code>auto_create_enabled</code> 且 <code>auto_create_game_id</code> 非空 → 自动创建房间并广播 <code>room.created</code> 事件；</li>
+  <li>否则配置了 <code>auto_join_enabled</code> 且 <code>auto_join_code</code> 非空 → 自动加入（支持短码 / 完整链接 / <code>AG1.</code> 离线串）；</li>
+  <li>否则若配置文件中直接写了 <code>[network_identity]</code> 等 EasyTier 段（旧配置兼容路径）→ 按该配置启动实例。</li>
+</ol>
+<p class="muted">自动联网逻辑复用 <code>api.rs</code> 中的 <code>create_room_impl</code> / <code>join_from_input</code>，与 HTTP 接口行为一致。</p>
+
+<h2 id="config">相关配置字段</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>auto_join_enabled</code></td><td>bool</td><td>守护进程：开机自动加入</td></tr>
+      <tr><td><code>auto_join_code</code></td><td>string</td><td>自动加入邀请（短码 / 链接 / <code>AG1.</code> 离线串）</td></tr>
+      <tr><td><code>auto_create_enabled</code></td><td>bool</td><td>守护进程：开机自动创建（与自动加入二选一）</td></tr>
+      <tr><td><code>auto_create_game_id</code></td><td>string</td><td>自动创建预设游戏 ID</td></tr>
+      <tr><td><code>auto_create_game_name</code></td><td>string</td><td>自动创建预设游戏名称</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="related">
+  <h3>相关页面</h3>
+  <ul>
+    <li><a href="configuration.html">配置参考</a></li>
+    <li><a href="rooms.html">联机房间操作</a></li>
+    <li><a href="quick-start.html">快速开始</a></li>
+  </ul>
+</div>
+
+</div></div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>联机房间操作 | Astral Game CLI</title>
+<meta name="description" content="创建/加入/离开房间、三种邀请形式、房间数据模型与分享链接。">
+<link rel="icon" type="image/png" href="./screenshot.png">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="rooms">
+<div class="content"><div class="main">
+
+<div class="page-head">
+  <h1>联机房间操作</h1>
+  <p class="lead">服务器通过 Web 管理端或 REST API 创建、加入、离开房间，并生成邀请链接供玩家加入。</p>
+</div>
+
+<h2 id="invite">三种邀请形式</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>形式</th><th>示例</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>短码</td><td><code>ABC123</code></td><td>由外部短码服务托管，更方便传播；服务不可用时建房降级为仅离线串</td></tr>
+      <tr><td>完整邀请链接</td><td><code>https://next.astral.fan/j?c=ABC123</code></td><td>从 URL 的 <code>c</code> 参数提取令牌</td></tr>
+      <tr><td><code>AG1.</code> 离线串</td><td><code>AG1.xxxxx…</code></td><td>完全自包含、不依赖短码服务</td></tr>
+    </tbody>
+  </table>
+</div>
+<p>短码输入时会先做<strong>规范化</strong>：去空白 / 连字符 / 下划线并转大写，<code>I/L → 1</code>、<code>O → 0</code>（对齐 Crockford Base32 去歧义规则）。</p>
+
+<h2 id="flow">房间生命周期</h2>
+<h3>创建房间</h3>
+<ol>
+  <li>读取<strong>已启用</strong>的中继服务器（未启用任何服务器则报错，房间必须至少有一个 peer）；</li>
+  <li>随机生成网络名 <code>network_name</code>（<code>ag_</code> + 10 位）与网络密钥 <code>network_secret</code>（16 位、剔除易混淆字符）；</li>
+  <li>编码 <code>AG1.</code> 离线串，并尝试向短码服务注册短码（失败不阻断）；</li>
+  <li>用服务端资料 + 房间网络身份组装 EasyTier TOML 并启动实例；</li>
+  <li>写入当前房间会话并生成分享链接。</li>
+</ol>
+
+<h3>加入 / 离开房间</h3>
+<p>加入流程与建房共用同一套核心逻辑：解析邀请（自动识别三种格式）→ 构建房间 → 启动节点 → 写入当前房间。离开则停止实例、清空当前房间并广播 <code>room.left</code>（不发邮件）。</p>
+
+<h2 id="api">REST 接口</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>接口</th><th>方法</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>/api/room/create</code></td><td>POST</td><td>请求体：<code>game_id</code>、<code>game_name</code>、<code>display_name</code>（可选）</td></tr>
+      <tr><td><code>/api/room/join</code></td><td>POST</td><td>请求体：<code>input</code>（短码 / 链接 / <code>AG1.</code> 离线串）</td></tr>
+      <tr><td><code>/api/room/leave</code></td><td>POST</td><td>离开房间</td></tr>
+      <tr><td><code>/api/room/current</code></td><td>GET</td><td>当前房间与分享链接（无房间时 <code>room</code> 为 <code>null</code>）</td></tr>
+    </tbody>
+  </table>
+</div>
+<p><code>game_id</code> 取自内置游戏列表（见<a href="relay-servers.html">中继服务器与游戏目录</a>），<code>custom</code> 表示自定义网络。</p>
+
+<h2 id="model">房间数据模型</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>字段</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>is_host</code></td><td>本机是否为房主（创建为 <code>true</code>，加入为 <code>false</code>）</td></tr>
+      <tr><td><code>game_id</code> / <code>game_name</code></td><td>游戏标识 / 名称</td></tr>
+      <tr><td><code>network_name</code> / <code>network_secret</code></td><td>EasyTier 网络名 / 密钥（同房间成员必须一致）</td></tr>
+      <tr><td><code>display_name</code></td><td>房间展示名（缺省时取游戏名）</td></tr>
+      <tr><td><code>short_code</code></td><td>短码（服务不可用时为 <code>null</code>）</td></tr>
+      <tr><td><code>offline_invite</code></td><td><code>AG1.</code> 离线邀请串（始终可用）</td></tr>
+      <tr><td><code>peers</code></td><td>本房间使用的中继 / 对等节点端点列表</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2 id="share">分享链接</h2>
+<div class="code">
+  <div class="code__head"><span>text</span></div>
+<pre><code>https://next.astral.fan/j?c=ABC123        # 短码形式
+https://next.astral.fan/j?c=AG1.xxxxx…    # 离线串形式</code></pre>
+</div>
+
+<div class="related">
+  <h3>相关页面</h3>
+  <ul>
+    <li><a href="websocket-events.html">WebSocket 事件推送</a></li>
+    <li><a href="daemon-auto-connect.html">守护进程自动联网</a></li>
+    <li><a href="relay-servers.html">中继服务器与游戏目录</a></li>
+    <li><a href="rest-api.html">REST API 参考</a></li>
+  </ul>
+</div>
+
+</div></div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

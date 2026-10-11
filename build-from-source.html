@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>从源码编译 | Astral Game CLI</title>
+<meta name="description" content="安装依赖、cargo build 编译、生成示例配置与 .deb 打包。">
+<link rel="icon" type="image/png" href="./screenshot.png">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="build-from-source">
+<div class="content"><div class="main">
+
+<div class="page-head">
+  <h1>从源码编译</h1>
+  <p class="lead">适合需要在目标平台自行构建二进制，或参与开发的场景。</p>
+</div>
+
+<h2 id="requirements">环境要求</h2>
+<ul>
+  <li>Debian / Ubuntu 系统</li>
+  <li>Rust 工具链（稳定版）</li>
+  <li>基础构建依赖</li>
+</ul>
+
+<h2 id="install-deps">安装依赖</h2>
+<div class="code">
+  <div class="code__head"><span>bash</span><button class="code__copy" data-copy="sudo apt update
+sudo apt install -y build-essential pkg-config libssl-dev
+
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source $HOME/.cargo/env">复制</button></div>
+<pre><code>sudo apt update
+sudo apt install -y build-essential pkg-config libssl-dev
+
+# 安装 Rust（如果未安装）
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source $HOME/.cargo/env</code></pre>
+</div>
+
+<h2 id="build">编译</h2>
+<div class="code">
+  <div class="code__head"><span>bash</span><button class="code__copy" data-copy="cd Linux_Server_CLI
+cargo build --release
+# 编译产物位置：target/release/astral-server">复制</button></div>
+<pre><code>cd Linux_Server_CLI
+
+# Release 编译（约 3-5 分钟，优化体积和性能）
+cargo build --release
+
+# 编译产物位置
+# target/release/astral-server</code></pre>
+</div>
+
+<h2 id="init">生成示例配置</h2>
+<div class="code">
+  <div class="code__head"><span>bash</span><button class="code__copy" data-copy="./target/release/astral-server init
+# 会在可执行文件同目录生成 config.toml">复制</button></div>
+<pre><code>./target/release/astral-server init
+# 会在可执行文件同目录生成 config.toml</code></pre>
+</div>
+
+<h2 id="export-web">导出 Web 管理端（可选）</h2>
+<div class="code">
+  <div class="code__head"><span>bash</span></div>
+<pre><code>./target/release/astral-server export-web --output web/index.html</code></pre>
+</div>
+
+<h2 id="deb">打包 .deb 安装包</h2>
+<p>仓库提供 <code>deploy/build-deb.sh</code> 脚本，可将编译产物打包为符合 FHS 布局的 <code>.deb</code>：</p>
+<div class="code">
+  <div class="code__head"><span>bash</span><button class="code__copy" data-copy="bash deploy/build-deb.sh
+bash deploy/build-deb.sh arm64 aarch64-unknown-linux-gnu">复制</button></div>
+<pre><code># 使用已编译好的 target/x86_64-unknown-linux-gnu/release/astral-server
+bash deploy/build-deb.sh
+
+# 指定架构与 target（ARM 交叉编译示例）
+bash deploy/build-deb.sh arm64 aarch64-unknown-linux-gnu</code></pre>
+</div>
+<p>脚本行为：</p>
+<ul>
+  <li>版本号直接取自 <code>Cargo.toml</code>（形如 <code>1.4.2-4</code>），保证包版本与二进制一致；</li>
+  <li>二进制不存在时自动 <code>cargo build --release</code>（交叉 target 缺则尝试 <code>rustup target add</code>）；</li>
+  <li>用二进制自带的示例配置生成包内默认配置（与 <code>astral-server init</code> 一致）；</li>
+  <li>安装 <code>astral-server.service</code> systemd 单元文件；</li>
+  <li>通过 <code>conffiles</code> 声明 <code>/etc/astral-server/config.toml</code>，升级时保留用户修改；</li>
+  <li><code>postinst</code> / <code>prerm</code> 处理 systemd 重载与卸载时的服务停止。</li>
+</ul>
+<p>产物位于 <code>dist/astral-server_&lt;版本&gt;_&lt;架构&gt;.deb</code>。</p>
+
+<div class="related">
+  <h3>相关页面</h3>
+  <ul>
+    <li><a href="quick-start.html">快速开始</a></li>
+    <li><a href="cli-commands.html">命令行接口 CLI</a></li>
+    <li><a href="configuration.html">配置参考</a></li>
+  </ul>
+</div>
+
+</div></div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

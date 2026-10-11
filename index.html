@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Astral Game CLI — 无头 P2P 联机服务器</title>
+<meta name="description" content="基于 Astral Game（AstralNext/AstralGame）二次开发的服务器版联机工具，组网内核 EasyTier，适配 Debian/Ubuntu 无头服务器，内置 Web 管理界面。">
+<link rel="icon" type="image/png" href="./screenshot.png">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="index">
+<div class="content"><div class="main">
+
+<div class="page-head">
+  <img class="banner" src="./screenshot.png" alt="Astral Game CLI 横幅">
+  <p class="lead">
+    基于 <a href="https://github.com/AstralNext/AstralGame" target="_blank" rel="noopener">Astral Game</a>
+    二次开发的<strong>服务器版</strong>联机工具，组网内核为 <a href="https://easytier.cn" target="_blank" rel="noopener">EasyTier</a>，
+    适配 Debian / Ubuntu 无头服务器，内置 Web 管理界面，可通过浏览器管理服务器、创建 / 加入房间。
+    当前版本 <span class="badge">v1.4.2_4</span>
+  </p>
+</div>
+
+<h2 id="features">核心特性</h2>
+<div class="grid">
+  <div class="card"><div class="card__icon">🕹️</div><h4>联机房间</h4><p>创建 / 加入房间，支持短码、<code>AG1.</code> 离线串与完整邀请链接。</p></div>
+  <div class="card"><div class="card__icon">👥</div><h4>成员管理</h4><p>自动过滤中继节点，仅显示真实用户；本机标记「本机」。</p></div>
+  <div class="card"><div class="card__icon">🛡️</div><h4>网络设置</h4><p>可开关「禁用 P2P 打洞」、TUN 虚拟网卡与静态虚拟 IP。</p></div>
+  <div class="card"><div class="card__icon">♻️</div><h4>守护进程</h4><p>开机自动加入 / 自动创建预设房间（二选一），重启免人工。</p></div>
+  <div class="card"><div class="card__icon">📡</div><h4>WebSocket 推送</h4><p>房间内容与状态实时广播，第三方服务可发送控制指令。</p></div>
+  <div class="card"><div class="card__icon">✉️</div><h4>邮件通知</h4><p>SMTP 配置后自动发送同风格 HTML 邮件，模板可自由编辑。</p></div>
+  <div class="card"><div class="card__icon">🎨</div><h4>配色方案</h4><p>内置昼间 5 种 + 夜间 5 种共 10 种配色，本地记忆。</p></div>
+  <div class="card"><div class="card__icon">⚡</div><h4>在线更新</h4><p>检查 GitHub Releases 并自动替换二进制重启。</p></div>
+</div>
+
+<h2 id="architecture">整体架构</h2>
+<div class="code">
+  <div class="code__head"><span>单进程内嵌四层</span></div>
+<pre><code>┌────────────────────────────────────────────────┐
+│ Web 管理端（单页前端，编译时内嵌 index.html）      │
+├────────────────────────────────────────────────┤
+│ Axum HTTP 层：REST API + WebSocket 事件推送      │
+│  鉴权：Cookie 会话（面板）/ Basic Auth / ws_key   │
+├────────────────────────────────────────────────┤
+│ 业务层：房间、服务器列表、凭据、SMTP、更新、事件中心 │
+├────────────────────────────────────────────────┤
+│ EasyTier 内核：组网节点、TUN、P2P 打洞、中继       │
+└────────────────────────────────────────────────┘</code></pre>
+</div>
+
+<h2 id="deploy">部署目录</h2>
+<p>所有运行期数据统一存放于可执行文件同目录，<strong>单目录即可维护整套服务</strong>。</p>
+<div class="code">
+  <div class="code__head"><span>目录结构</span></div>
+<pre><code>/opt/astral-server/
+├── astral-server                 # 可执行文件
+├── config.toml                   # 配置文件（Web 端口、账号密码等）
+├── servers.json                  # 服务器列表数据（自动生成）
+├── avatar.bin                    # 本机头像（可选）
+└── Email/                        # 邮件模板（首次运行自动生成）
+    ├── room_notification.html
+    └── room_notification.txt</code></pre>
+</div>
+
+<h2 id="source">源码模块划分</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>模块</th><th>职责</th></tr></thead>
+    <tbody>
+      <tr><td><code>main.rs</code></td><td>入口：解析 <code>run</code> / <code>init</code> / <code>export-web</code>，装配状态并启动 HTTP 服务</td></tr>
+      <tr><td><code>config.rs</code></td><td><code>config.toml</code> 加载、解析、写回与示例配置生成</td></tr>
+      <tr><td><code>http.rs</code></td><td>Axum 路由与鉴权中间件（Cookie 会话优先，Basic Auth 兼容）</td></tr>
+      <tr><td><code>api.rs</code></td><td>REST API 处理器（登录、房间、服务器、凭据、SMTP、更新等）</td></tr>
+      <tr><td><code>ws.rs</code></td><td>WebSocket：面板推送 + 第三方服务接入 + 控制指令协议</td></tr>
+      <tr><td><code>notify.rs</code></td><td>事件中心：一处发布，同时驱动 WebSocket 广播与通知邮件</td></tr>
+      <tr><td><code>invite.rs</code></td><td><code>AG1.</code> 离线串 / 短码 / 分享链接的生成与解析</td></tr>
+      <tr><td><code>mailer.rs</code></td><td>SMTP 发信与可外置编辑的模板</td></tr>
+      <tr><td><code>node.rs</code></td><td>EasyTier 实例生命周期、事件日志、状态快照、凭据</td></tr>
+      <tr><td><code>store.rs</code></td><td>本地文件持久化（<code>servers.json</code>、<code>avatar.bin</code>）</td></tr>
+      <tr><td><code>update.rs</code></td><td>在线更新：GitHub Releases 检查、下载替换、重启</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="related">
+  <h3>相关页面</h3>
+  <ul>
+    <li><a href="quick-start.html">快速开始</a></li>
+    <li><a href="configuration.html">配置参考</a></li>
+    <li><a href="websocket-events.html">WebSocket 事件推送</a></li>
+    <li><a href="rest-api.html">REST API 参考</a></li>
+  </ul>
+</div>
+
+</div></div>
+<script src="assets/nav.js"></script>
+</body>
+</html>

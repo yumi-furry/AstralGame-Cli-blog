@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>命令行接口 CLI | Astral Game CLI</title>
+<meta name="description" content="run / init / export-web 三个子命令的用法与参数。">
+<link rel="icon" type="image/png" href="./screenshot.png">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-page="cli-commands">
+<div class="content"><div class="main">
+
+<div class="page-head">
+  <h1>命令行接口 CLI</h1>
+  <p class="lead"><code>astral-server</code> 提供三个子命令：<code>run</code>（运行服务）、<code>init</code>（生成示例配置）、<code>export-web</code>（导出 Web 管理端）。</p>
+</div>
+
+<pre style="background:var(--code-bg);color:var(--code-fg);border-radius:var(--radius);padding:14px 16px;margin:0 0 20px;font-family:ui-monospace,monospace;font-size:13px;">astral-server 1.4.2_4
+Astral Game P2P server (headless) with embedded web management</pre>
+
+<h2 id="overview">子命令一览</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>子命令</th><th>作用</th><th>参数</th></tr></thead>
+    <tbody>
+      <tr><td><code>run</code></td><td>启动 EasyTier 节点 + Web 管理端</td><td><code>--config &lt;路径&gt;</code>（可选）</td></tr>
+      <tr><td><code>init</code></td><td>生成一份示例配置文件</td><td><code>--config &lt;路径&gt;</code>（可选）</td></tr>
+      <tr><td><code>export-web</code></td><td>导出内嵌 Web 管理端（index.html）</td><td><code>--output &lt;路径&gt;</code>（默认 <code>web-export/index.html</code>）</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<h2 id="run">run</h2>
+<p>启动 EasyTier 节点与内嵌 Web 管理端（REST API + WebSocket + 静态单页前端），监听 Ctrl-C / SIGTERM 优雅停止节点。</p>
+<div class="code">
+  <div class="code__head"><span>bash</span><button class="code__copy" data-copy="sudo ./astral-server run
+sudo ./astral-server run --config /etc/astral-server/config.toml">复制</button></div>
+<pre><code># 使用可执行文件同目录的 config.toml
+sudo ./astral-server run
+
+# 指定配置文件路径
+sudo ./astral-server run --config /etc/astral-server/config.toml</code></pre>
+</div>
+<p><code>--config</code> 未指定时默认使用<strong>可执行文件同目录</strong>下的 <code>config.toml</code>。启动时还会自动完成：</p>
+<ul>
+  <li><code>ws_key</code> 为空时自动生成随机密钥并写回配置；</li>
+  <li>首次运行生成 <code>Email/</code> 邮件模板；</li>
+  <li>按<a href="daemon-auto-connect.html">守护进程自动联网</a>策略自动创建 / 加入预设房间，或按配置中的 EasyTier 实例段自动联网。</li>
+</ul>
+
+<h2 id="init">init</h2>
+<div class="code">
+  <div class="code__head"><span>bash</span><button class="code__copy" data-copy="./target/release/astral-server init
+./target/release/astral-server init --config /etc/astral-server/config.toml">复制</button></div>
+<pre><code># 会在可执行文件同目录生成 config.toml
+./target/release/astral-server init
+
+# 指定生成路径
+./target/release/astral-server init --config /etc/astral-server/config.toml</code></pre>
+</div>
+
+<h2 id="export-web">export-web</h2>
+<div class="code">
+  <div class="code__head"><span>bash</span><button class="code__copy" data-copy="./target/release/astral-server export-web
+./target/release/astral-server export-web --output web/index.html">复制</button></div>
+<pre><code># 默认导出到 web-export/index.html
+./target/release/astral-server export-web
+
+# 指定输出路径
+./target/release/astral-server export-web --output web/index.html</code></pre>
+</div>
+
+<h2 id="path">配置路径约定</h2>
+<p>未显式指定 <code>--config</code> 时，配置与运行期数据（<code>config.toml</code>、<code>servers.json</code>、<code>avatar.bin</code>、<code>Email/</code> 模板）统一放在可执行文件同目录。</p>
+
+<div class="related">
+  <h3>相关页面</h3>
+  <ul>
+    <li><a href="quick-start.html">快速开始</a></li>
+    <li><a href="build-from-source.html">从源码编译</a></li>
+    <li><a href="configuration.html">配置参考</a></li>
+  </ul>
+</div>
+
+</div></div>
+<script src="assets/nav.js"></script>
+</body>
+</html>
