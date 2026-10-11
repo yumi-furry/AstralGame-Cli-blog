@@ -50,12 +50,426 @@
 <h2 id="code">完整 HTML 代码</h2>
 <div class="code">
   <div class="code__head"><span>html</span><button class="code__copy" data-copy="<!-- 完整卡片代码较长，请参见博客对应 wiki 页面 mcsm-custom-card.md -->">复制说明</button></div>
-<pre><code>&lt;!-- 完整实现见 wiki 页面 mcsm-custom-card.md --
-    核心：WebSocket 连接 /api/ws/service，
-    发 {"action":"get_room_info"} 拉取成员，
-    渲染 members 的 hostname 与 latency_ms（<80/<200/≥200 ms 分色），
-    过滤 cost>1 的中继节点，配置存 localStorage，
-    提供「配置」与「退出」按钮。</code></pre>
+<pre><code>&lt;<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AstralGame 实时卡片</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-muted: #f6f8fa;
+    --border: #d0d7de;
+    --fg: #1f2328;
+    --fg-muted: #656d76;
+    --success: #1a7f37;
+    --danger: #cf222e;
+    --warn: #9a6700;
+    --radius: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg-muted);
+    padding: 12px;
+    color: var(--fg);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .ag-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    max-width: 460px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(31,35,40,0.04);
+  }
+  .ag-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--bg-muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .ag-card__title { font-size: 13px; font-weight: 600; letter-spacing: 0.2px; }
+  .ag-card__title small { font-weight: 400; color: var(--fg-muted); margin-left: 6px; }
+  .ag-status {
+    display: inline-flex; align-items: center;
+    font-size: 12px; font-weight: 500;
+    padding: 2px 8px; border-radius: 999px; border: 1px solid transparent;
+  }
+  .ag-status__dot { width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; }
+  .ag-status--connected { color: var(--success); background: #dafbe1; border-color: #aceebb; }
+  .ag-status--connected .ag-status__dot { background: var(--success); }
+  .ag-status--disconnected { color: var(--fg-muted); background: #eef1f4; border-color: #d0d7de; }
+  .ag-status--disconnected .ag-status__dot { background: var(--fg-muted); }
+  .ag-status--error { color: var(--danger); background: #ffebe9; border-color: #ffcecb; }
+  .ag-status--error .ag-status__dot { background: var(--danger); }
+  .ag-status--loading { color: var(--warn); background: #fff8c5; border-color: #f5e08a; }
+  .ag-status--loading .ag-status__dot { background: var(--warn); animation: ag-pulse 1.2s infinite; }
+  @keyframes ag-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .ag-config { padding: 12px 14px; border-bottom: 1px solid var(--border); display: none; }
+  .ag-config--open { display: block; }
+  .ag-config label {
+    display: block; font-size: 11px; color: var(--fg-muted);
+    margin: 8px 0 3px;
+  }
+  .ag-config input {
+    width: 100%; padding: 5px 8px; font-size: 12px; font-family: inherit;
+    border: 1px solid var(--border); border-radius: 4px; background: #fff; color: var(--fg);
+  }
+  .ag-config input:focus { outline: none; border-color: #0969da; }
+
+  .ag-card__body { padding: 14px; }
+  .ag-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; border-bottom: 1px dashed #eaeef2; font-size: 12.5px;
+  }
+  .ag-row:last-child { border-bottom: none; }
+  .ag-row__label { color: var(--fg-muted); flex-shrink: 0; margin-right: 12px; }
+  .ag-row__value { font-weight: 500; text-align: right; word-break: break-all; max-width: 62%; }
+  .ag-row__value code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    background: var(--bg-muted); padding: 1px 6px; border-radius: 4px; font-size: 11.5px;
+  }
+  .ag-empty { text-align: center; color: var(--fg-muted); padding: 16px 8px; font-size: 12.5px; }
+
+  .ag-section { font-size: 11px; color: var(--fg-muted); margin: 14px 0 6px; font-weight: 600; }
+  .ag-members { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .ag-member {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 10px; border-bottom: 1px solid #eaeef2; font-size: 12.5px;
+  }
+  .ag-member:last-child { border-bottom: none; }
+  .ag-member__name { font-weight: 500; }
+  .ag-member__name .ag-tag {
+    font-size: 10px; font-weight: 500; margin-left: 6px; padding: 1px 5px;
+    border-radius: 999px; background: #ddf4ff; color: #0969da;
+  }
+  .ag-member__meta { text-align: right; color: var(--fg-muted); font-size: 11.5px; }
+  .ag-member__latency { font-weight: 600; color: var(--fg); }
+  .ag-latency--good { color: var(--success); }
+  .ag-latency--mid { color: var(--warn); }
+  .ag-latency--bad { color: var(--danger); }
+
+  .ag-card__footer {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 14px; background: var(--bg-muted);
+    border-top: 1px solid var(--border); font-size: 11.5px; color: var(--fg-muted);
+  }
+  .ag-btn {
+    background: none; border: 1px solid var(--border); border-radius: 4px;
+    padding: 3px 10px; font-size: 12px; color: var(--fg); cursor: pointer; font-family: inherit;
+  }
+  .ag-btn:hover { background: #eef1f4; }
+  .ag-btn--primary { background: #0969da; border-color: #0969da; color: #fff; }
+  .ag-btn--primary:hover { background: #0a5cc0; }
+  .ag-btn--danger { background: none; border-color: #ffcecb; color: var(--danger); }
+  .ag-btn--danger:hover { background: #ffebe9; }
+</style>
+</head>
+<body>
+  <div class="ag-card">
+    <div class="ag-card__header">
+      <div class="ag-card__title">
+        AstralGame <small id="agVersion">—</small>
+      </div>
+      <span class="ag-status ag-status--disconnected" id="agStatus">
+        <span class="ag-status__dot"></span>
+        <span id="agStatusText">未连接</span>
+      </span>
+    </div>
+
+    <!-- 连接配置区 -->
+    <div class="ag-config" id="agConfig">
+      <label for="inUrl">WS 地址</label>
+      <input id="inUrl" placeholder="ws://127.0.0.1:8080/api/ws/service">
+      <label for="inKey">服务密钥（ws_key）</label>
+      <input id="inKey" placeholder="面板「设置 → 第三方服务」中的密钥">
+      <label for="inName">服务名称</label>
+      <input id="inName" placeholder="MyCard">
+      <label for="inType">服务类型</label>
+      <input id="inType" placeholder="MCSM">
+      <div style="margin-top:10px;text-align:right;">
+        <button class="ag-btn ag-btn--primary" id="agConnectBtn">连接</button>
+      </div>
+    </div>
+
+    <div class="ag-card__body" id="agBody">
+      <div class="ag-empty">请点击下方「配置」填写 WS 连接信息后连接</div>
+    </div>
+
+    <div class="ag-card__footer">
+      <span id="agUpdated">—</span>
+      <span>
+        <button class="ag-btn" id="agConfigBtn">配置</button>
+        <button class="ag-btn ag-btn--danger" id="agExitBtn" disabled>退出</button>
+      </span>
+    </div>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+  var STORE_KEY = 'agCardConfig';
+  var REFRESH_MS = 5000;            // 成员列表刷新间隔
+  var RECONNECT_MS = 5000;          // 断线自动重连间隔（0 = 关闭）
+
+  var $ = function (id) { return document.getElementById(id); };
+  var ws = null;
+  var refreshTimer = null;
+  var reconnectTimer = null;
+  var lastRoom = null;              // 最近一次事件中的房间对象
+  var lastShareUrl = null;
+  var lastNode = null;
+  var lastRunning = false;
+
+  // ---------- 配置持久化 ----------
+  function loadConfig() {
+    try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }
+    catch (e) { return {}; }
+  }
+  function saveConfig(cfg) {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(cfg)); } catch (e) {}
+  }
+
+  // ---------- 状态展示 ----------
+  function setStatus(kind, text) {
+    $('agStatus').className = 'ag-status ag-status--' + kind;
+    $('agStatusText').textContent = text;
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function row(label, value) {
+    return '<div class="ag-row"><span class="ag-row__label">' + esc(label) +
+           '</span><span class="ag-row__value">' + value + '</span></div>';
+  }
+  function setUpdated() {
+    $('agUpdated').textContent = '更新于 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  }
+  function latencyClass(ms) {
+    if (ms == null || ms < 0) return '';
+    if (ms < 80) return 'ag-latency--good';
+    if (ms < 200) return 'ag-latency--mid';
+    return 'ag-latency--bad';
+  }
+
+  // ---------- 渲染 ----------
+  function render() {
+    var html = '';
+    if (!lastRoom) {
+      html += '<div class="ag-empty">当前未加入任何房间</div>';
+    } else {
+      var r = lastRoom;
+      html += row('当前房间', esc(r.game_name || r.game_id || '—'));
+      if (r.short_code) html += row('短码', '<code>' + esc(r.short_code) + '</code>');
+      if (r.display_name) html += row('显示名', esc(r.display_name));
+      html += row('房主', r.is_host ? '是' : '否');
+      if (lastShareUrl) html += row('分享链接', '<code>' + esc(lastShareUrl) + '</code>');
+    }
+    if (lastNode) {
+      html += row('运行状态', lastRunning ? '运行中' : '已停止');
+      if (lastNode.my_ipv4) html += row('虚拟 IP', '<code>' + esc(lastNode.my_ipv4) + '</code>');
+      if (lastNode.total_nodes != null) html += row('节点数', esc(lastNode.total_nodes));
+    }
+    $('agBody').innerHTML = html || '<div class="ag-empty">暂无状态数据</div>';
+  }
+
+  function renderMembers(members) {
+    var list = (members || []).filter(function (m) {
+      // 过滤中继节点（cost>1），仅展示本机与直连真实用户
+      return m.cost == null || m.cost <= 1;
+    });
+    if (!list.length) return;
+    var html = '<div class="ag-section">在线成员（' + list.length + '）</div><div class="ag-members">';
+    list.forEach(function (m) {
+      var name = esc(m.hostname || 'unknown');
+      var tag = '';
+      if (m.peer_id === 0 || m.conn_type === 'Local') tag = '<span class="ag-tag">本机</span>';
+      if (m.cost > 1) tag = '<span class="ag-tag">中继</span>';
+      var lat = (m.latency_ms == null || m.latency_ms < 0) ? '—' : Math.round(m.latency_ms) + ' ms';
+      var latCls = latencyClass(m.latency_ms);
+      html += '<div class="ag-member">' +
+        '<span class="ag-member__name">' + name + tag + '</span>' +
+        '<span class="ag-member__meta">' +
+          (m.ipv4 ? '<code>' + esc(m.ipv4) + '</code> · ' : '') +
+          '<span class="ag-member__latency ' + latCls + '">' + lat + '</span>' +
+        '</span></div>';
+    });
+    html += '</div>';
+    // 成员区追加在房间/状态信息之后
+    $('agBody').insertAdjacentHTML('beforeend', html);
+  }
+
+  // ---------- WebSocket 数据流 ----------
+  function handleMessage(raw) {
+    var msg;
+    try { msg = JSON.parse(raw); } catch (e) { return; }
+
+    if (msg.event === 'hello') {
+      setStatus('connected', '已连接');
+      if (msg.id) $('agVersion').textContent = 'ID ' + String(msg.id).slice(0, 8);
+      requestRoomInfo();               // 连接后立即拉取成员
+      return;
+    }
+    if (msg.event === 'result') {
+      if (msg.ok && msg.data) {
+        lastRunning = !!msg.data.running;
+        if (msg.data.node) lastNode = msg.data.node;
+        render();
+        renderMembers(msg.data.members);
+        if (msg.data.uptime_secs != null) {
+          $('agBody').insertAdjacentHTML('beforeend',
+            row('运行时长', Math.floor(msg.data.uptime_secs / 60) + ' 分钟'));
+        }
+        setUpdated();
+      }
+      return;
+    }
+    // 快照 / 房间事件
+    if (msg.event === 'snapshot' || msg.event === 'server.started' ||
+        msg.event === 'room.created' || msg.event === 'room.joined' ||
+        msg.event === 'room.left') {
+      lastRoom = msg.room || null;
+      lastShareUrl = msg.share_url || null;
+      lastNode = msg.node || null;
+      lastRunning = !!msg.running;
+      if (msg.node && msg.node.server_version) $('agVersion').textContent = msg.node.server_version;
+      render();
+      if (msg.room) requestRoomInfo(); // 有房间则拉取成员列表
+      setUpdated();
+    }
+  }
+
+  function requestRoomInfo() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: 'get_room_info', id: 'card-' + Date.now() }));
+    }
+  }
+
+  // ---------- 连接管理 ----------
+  function connect() {
+    var cfg = loadConfig();
+    var base = (cfg.url || '').trim();
+    if (!base) { setStatus('error', '请先填写 WS 地址'); return; }
+    var qs = 'key=' + encodeURIComponent(cfg.key || '') +
+             '&name=' + encodeURIComponent(cfg.name || '') +
+             '&type=' + encodeURIComponent(cfg.type || '');
+    var url;
+    try {
+      // 只取 origin（协议+主机+端口）作为底座，一律拼 /api/ws/service，
+      // 避免在用户误输入的 path 上再追加一节路径。
+      var u = new URL(base);
+      var proto = u.protocol === 'https:' ? 'wss' : (u.protocol === 'http:' ? 'ws' : u.protocol);
+      url = proto + '//' + u.host + '/api/ws/service?' + qs;
+    } catch (e) { setStatus('error', '地址无效，应形如 ws://主机:端口'); return; }
+    setStatus('loading', '连接中…');
+    try {
+      ws = new WebSocket(url);
+    } catch (e) { setStatus('error', '地址无效'); return; }
+
+    ws.onopen = function () { setStatus('loading', '等待认证…'); };
+    ws.onmessage = function (e) { handleMessage(String(e.data)); };
+    ws.onerror = function () {
+      setStatus('error', '连接失败');
+      $('agBody').innerHTML =
+        '<div class="ag-empty">WebSocket 连接失败<br><small>请检查：端口是否与 web_port 一致、密钥是否正确、是否被混合内容/同源策略拦截</small></div>';
+    };
+    ws.onclose = function (e) {
+      var reason = (e && e.reason) ? String(e.reason) : '';
+      var code = (e && e.code != null) ? String(e.code) : '';
+      // code 1006 = 无正常关闭帧，通常握手阶段被拒绝（如 401/端口不通）；reason 含服务端原因时优先展示。
+      if (reason && reason.indexOf('401') >= 0) {
+        setStatus('error', '密钥错误');
+        $('agBody').innerHTML = '<div class="ag-empty">服务端拒绝鉴权（401）<br><small>ws_key 不正确，请在面板「设置 → 第三方服务」核对密钥</small></div>';
+      } else if (code === '1006') {
+        setStatus('error', '握手失败');
+        $('agBody').innerHTML = '<div class="ag-empty">握手失败<br><small>端口可能未监听 / web_port 不匹配，或页面为 HTTPS 而使用了 ws://（混合内容被浏览器拦截）</small></div>';
+      } else {
+        setStatus('disconnected', '已断开');
+        $('agBody').innerHTML = '<div class="ag-empty">连接已关闭' +
+          (reason ? '<br><small>' + esc(reason) + '</small>' : '') + '</div>';
+      }
+      stopRefresh();
+      scheduleReconnect();
+    };
+    startRefresh();
+  }
+
+  function disconnect() {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+    if (ws) { try { ws.close(); } catch (e) {} ws = null; }
+    setStatus('disconnected', '已断开');
+    stopRefresh();
+  }
+
+  function startRefresh() {
+    stopRefresh();
+    refreshTimer = setInterval(requestRoomInfo, REFRESH_MS);
+  }
+  function stopRefresh() {
+    if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+  }
+  function scheduleReconnect() {
+    if (RECONNECT_MS > 0) {
+      reconnectTimer = setTimeout(connect, RECONNECT_MS);
+    }
+  }
+
+  // ---------- 配置区交互 ----------
+  function openConfig() {
+    var cfg = loadConfig();
+    $('inUrl').value = cfg.url || '';
+    $('inKey').value = cfg.key || '';
+    $('inName').value = cfg.name || '';
+    $('inType').value = cfg.type || '';
+    $('agConfig').classList.add('ag-config--open');
+  }
+
+  $('agConfigBtn').addEventListener('click', function () {
+    if ($('agConfig').classList.contains('ag-config--open')) {
+      $('agConfig').classList.remove('ag-config--open');
+    } else { openConfig(); }
+  });
+  $('agConnectBtn').addEventListener('click', function () {
+    saveConfig({
+      url: $('inUrl').value.trim(),
+      key: $('inKey').value.trim(),
+      name: $('inName').value.trim(),
+      type: $('inType').value.trim()
+    });
+    $('agConfig').classList.remove('ag-config--open');
+    if (ws && ws.readyState === WebSocket.OPEN) disconnect();
+    connect();
+  });
+  $('agExitBtn').addEventListener('click', function () {
+    disconnect();
+    $('agExitBtn').disabled = true;
+    $('agConfigBtn').disabled = false;
+  });
+
+  // ---------- 初始化 ----------
+  (function init() {
+    var cfg = loadConfig();
+    $('agVersion').textContent = 'v1.4.2_4';
+    openConfig();
+    if (cfg.url) {
+      // 已保存过配置：自动连接
+      $('agConfig').classList.remove('ag-config--open');
+      connect();
+    }
+  })();
+})();
+</script>
+</body>
+</html></code></pre>
 </div>
 <p class="muted">完整可运行 HTML 代码已在本博客对应的 <a href="index.html">项目介绍</a> 关联的 <code>mcsm-custom-card.md</code> wiki 页面提供。</p>
 
