@@ -1,7 +1,8 @@
 /* ============================================================
    Astral Game CLI — Wiki 静态站点共享样式
-   布局参考 docs.mcsmanager.com：顶栏 + 左侧导航 + 内容区
    ============================================================ */
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css">
 :root {
   --bg: #ffffff;
   --bg-soft: #f6f8fa;
