@@ -6,6 +6,8 @@
 <title>快速开始 | Astral Game CLI</title>
 <meta name="description" content="二进制部署、注册 systemd 服务、.deb 打包，让服务器重启后自动恢复房间。">
 <link rel="icon" type="image/png" href="./screenshot.png">
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body data-page="quick-start">
@@ -144,6 +146,14 @@ bash deploy/build-deb.sh arm64 aarch64-unknown-linux-gnu</code></pre>
 </div>
 
 </div></div>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+<script>
+  if (window.hljs) {
+    document.querySelectorAll('pre code').forEach(function (el) {
+      window.hljs.highlightElement(el);
+    });
+  }
+</script>
 <script src="assets/nav.js"></script>
 </body>
 </html>

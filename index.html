@@ -6,6 +6,8 @@
 <title>Astral Game CLI — 无头 P2P 联机服务器</title>
 <meta name="description" content="基于 Astral Game（AstralNext/AstralGame）二次开发的服务器版联机工具，组网内核 EasyTier，适配 Debian/Ubuntu 无头服务器，内置 Web 管理界面。">
 <link rel="icon" type="image/png" href="./screenshot.png">
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body data-page="index">
@@ -93,6 +95,14 @@
 </div>
 
 </div></div>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+<script>
+  if (window.hljs) {
+    document.querySelectorAll('pre code').forEach(function (el) {
+      window.hljs.highlightElement(el);
+    });
+  }
+</script>
 <script src="assets/nav.js"></script>
 </body>
 </html>

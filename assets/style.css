@@ -1,8 +1,6 @@
 /* ============================================================
    Astral Game CLI — Wiki 静态站点共享样式
    ============================================================ */
-<link rel="stylesheet"
-      href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css">
 :root {
   --bg: #ffffff;
   --bg-soft: #f6f8fa;
@@ -116,6 +114,12 @@ tr:last-child td { border-bottom: none; }
 .code__copy:hover { background: rgba(255,255,255,.1); }
 .code pre { padding: 14px 16px; overflow-x: auto; }
 .code code { background: none; border: none; padding: 0; font-size: 13px; color: var(--code-fg); line-height: 1.6; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+/* highlight.js 仅负责 token 配色，背景/内边距沿用 .code 深色主题 */
+.code .hljs {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
 
 /* ---------- 页脚 / 相关页面 ---------- */
 .related { margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--border); }

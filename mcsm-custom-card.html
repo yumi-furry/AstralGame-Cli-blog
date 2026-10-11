@@ -6,6 +6,8 @@
 <title>MCSM 自定义卡片 | Astral Game CLI</title>
 <meta name="description" content="通过 WebSocket 实时卡片接入 MCSM 管理面板，显示服务器状态与成员列表。">
 <link rel="icon" type="image/png" href="./screenshot.png">
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css">
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body data-page="mcsm-custom-card">
@@ -517,6 +519,10 @@
 
   // textContent 会自动把 < > & 转义，因此不会触发解析
   dst.textContent = src.value;
+  dst.classList.add('language-html');
+  if (window.hljs) {
+    window.hljs.highlightElement(dst);
+  }
 
   function setBtnText(text) {
     if (!btn) return;
@@ -551,6 +557,14 @@
 })();
 </script>
 
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+<script>
+  if (window.hljs) {
+    document.querySelectorAll('pre code').forEach(function (el) {
+      window.hljs.highlightElement(el);
+    });
+  }
+</script>
 <script src="assets/nav.js"></script>
 </body>
 </html>
