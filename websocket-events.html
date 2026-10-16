@@ -40,9 +40,26 @@
       <tr><td><code>room.created</code></td><td>服务器创建新房间</td><td>新房间</td></tr>
       <tr><td><code>room.joined</code></td><td>服务器加入目标房间</td><td>目标房间</td></tr>
       <tr><td><code>room.left</code></td><td>服务器离开房间</td><td><code>null</code></td></tr>
+      <tr><td><code>audit</code></td><td>产生操作记录（登录 / 登出 / 修改操作）时推送（1.5.1_1 起）</td><td>无（见下方 <code>entry</code> 字段）</td></tr>
     </tbody>
   </table>
 </div>
+
+<h3 id="audit-event"><code>audit</code> 事件（1.5.1_1 起）</h3>
+<p>面板端与第三方服务端点都会收到。</p>
+<div class="code">
+  <div class="code__head"><span>json</span></div>
+<pre><code>{
+  "event": "audit",
+  "timestamp": 1792059565,
+  "entry": {"ts": 1792059565, "kind": "login", "action": "登录成功", "ip": "192.168.1.10"}
+}</code></pre>
+</div>
+<ul>
+  <li><code>entry.kind</code>：<code>login</code> / <code>login_failed</code> / <code>logout</code> / <code>modify</code> / <code>modify_denied</code>（未授权的非 GET 请求尝试）。</li>
+  <li><code>entry.ip</code>：操作者 IP（反向代理 <code>X-Forwarded-For</code> / <code>X-Real-IP</code> 头优先，否则取 TCP 源地址）。</li>
+  <li>第三方 WS 控制指令的 <code>action</code> 带「第三方服务指令：」前缀。</li>
+</ul>
 
 <h2 id="message">消息格式</h2>
 <div class="code">
@@ -67,7 +84,7 @@
     "my_ipv4": "10.126.0.2",
     "total_nodes": 3,
     "error": null,
-    "server_version": "1.4.2_4",
+    "server_version": "1.5.1_1",
     "easytier_version": "1.x.x"
   }
 }</code></pre>

@@ -18,7 +18,7 @@
   --top-h: 60px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   color: var(--text); background: var(--bg);
@@ -125,18 +125,72 @@ tr:last-child td { border-bottom: none; }
 .related { margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--border); }
 .related h3 { margin-top: 0; }
 .related ul { padding-left: 20px; }
-.footer { border-top: 1px solid var(--border); padding: 26px 0; margin-top: 30px; font-size: 13px; color: var(--text-muted); }
+.footer { margin: 30px 0 0; font-size: 13px; color: var(--text-muted); }
+/* 内层与 .main 同轴居中（860 上限 + 36 内边距），分隔线与正文列等宽 */
+.footer__inner {
+  max-width: 860px; margin: 0 auto; padding: 18px 36px 30px;
+  border-top: 1px solid var(--border);
+}
+/* 桌面端 footer 是 body 直接子元素，须让出固定侧栏宽度，避免被 aside 遮挡 */
+@media (min-width: 901px) {
+  .footer { margin-left: var(--sidebar-w); }
+}
 
 /* ---------- 横幅 logo ---------- */
 .banner { width: 100%; max-width: 720px; height: auto; border-radius: 12px; margin: 0 0 20px; }
 
-/* ---------- 移动端 ---------- */
-.burger { display: none; }
+/* ---------- 响应式：平板 / 手机 ---------- */
+.burger {
+  display: none; align-items: center; justify-content: center;
+  width: 38px; height: 38px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font-size: 17px; line-height: 1; cursor: pointer;
+}
+.burger:hover { background: var(--bg-soft); }
+.sidebar-overlay {
+  position: fixed; inset: var(--top-h) 0 0 0; z-index: 35;
+  background: rgba(31,35,40,.4); opacity: 0; visibility: hidden; transition: .2s;
+}
+.sidebar-overlay.show { opacity: 1; visibility: visible; }
+
 @media (max-width: 900px) {
-  .sidebar { transform: translateX(-100%); transition: .2s; box-shadow: 0 0 40px rgba(0,0,0,.15); z-index: 40; }
+  .sidebar {
+    transform: translateX(-100%); transition: transform .2s ease;
+    box-shadow: 0 0 40px rgba(0,0,0,.15); z-index: 40;
+    padding-bottom: 32px; -webkit-overflow-scrolling: touch;
+  }
   .sidebar.open { transform: translateX(0); }
+  body.nav-open { overflow: hidden; }
   .content { margin-left: 0; }
   .burger { display: inline-flex; }
+  .topbar { padding: 0 14px; }
+  .topbar__links { display: none; }
   .main { padding: 0 18px 60px; }
+  .footer__inner { padding: 16px 18px 26px; }
   .page-head h1 { font-size: 26px; }
+  h2 { font-size: 21px; margin: 32px 0 12px; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); }
+}
+
+@media (max-width: 480px) {
+  body { font-size: 14.5px; }
+  .topbar { padding: 0 10px; }
+  .topbar__brand { gap: 8px; }
+  .topbar__logo { height: 27px; }
+  .topbar__brand small { display: none; }
+  .content { padding-top: calc(var(--top-h) + 18px); }
+  .main { padding: 0 14px 48px; }
+  .footer__inner { padding: 14px 14px 22px; }
+  .footer { font-size: 12.5px; }
+  .banner { margin-bottom: 14px; }
+  .page-head { margin-bottom: 20px; padding-bottom: 14px; }
+  .page-head h1 { font-size: 22px; }
+  .page-head .lead { font-size: 14px; }
+  h2 { font-size: 19px; margin: 28px 0 10px; }
+  h3 { font-size: 16.5px; }
+  .card { padding: 14px; }
+  .note { padding: 10px 12px; font-size: 13px; }
+  th, td { padding: 8px 10px; font-size: 12.5px; }
+  .code pre { padding: 12px 12px; }
+  .code code, code:not(pre code) { font-size: 12px; }
+  .code__head { padding: 7px 10px; }
 }

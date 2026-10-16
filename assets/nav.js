@@ -6,7 +6,7 @@
   'use strict';
 
   var SITE = 'Astral Game CLI';
-  var VERSION = 'v1.4.2_4';
+  var VERSION = 'v1.5.1_1';
   var GITHUB = 'https://github.com/yumi-furry/AstralGame-cli';
   var BLOG = 'https://github.com/yumi-furry/AstralGame-Cli-blog';
   var LOGO = './screenshot.png';
@@ -57,7 +57,7 @@
     ];
     var html = '<header class="topbar">' +
       '<div style="display:flex;align-items:center;gap:12px;">' +
-        '<button class="btn burger" id="burger" aria-label="菜单">☰</button>' +
+        '<button class="burger" id="burger" aria-label="菜单" aria-controls="sidebar">☰</button>' +
         '<a class="topbar__brand" href="index.html">' +
           '<img class="topbar__logo" src="' + esc(LOGO) + '" alt="' + esc(SITE) + '">' +
           '<small>' + esc(VERSION) + '</small>' +
@@ -93,8 +93,8 @@
   }
 
   function buildFooter() {
-    return '<footer class="footer" style="max-width:860px;margin:30px auto 0;padding:0 36px 30px;">' +
-      '<div class="table-wrap" style="padding:18px 0;border:none;">' +
+    return '<footer class="footer">' +
+      '<div class="footer__inner">' +
       '<strong>' + esc(SITE) + '</strong> ' + esc(VERSION) +
       ' · 基于 <a href="https://github.com/AstralNext/AstralGame" target="_blank" rel="noopener">Astral Game</a> 二次开发' +
       ' · 组网内核 <a href="https://easytier.cn" target="_blank" rel="noopener">EasyTier</a> · ' +
@@ -126,11 +126,28 @@
       });
     });
 
-    // 移动端菜单
+    // 移动端菜单：抽屉 + 遮罩 + Esc / 点击链接关闭
     var burger = document.getElementById('burger');
     var sidebar = document.getElementById('sidebar');
     if (burger && sidebar) {
-      burger.addEventListener('click', function () { sidebar.classList.toggle('open'); });
+      var overlay = document.createElement('div');
+      overlay.className = 'sidebar-overlay';
+      document.body.appendChild(overlay);
+
+      function setNav(open) {
+        sidebar.classList.toggle('open', open);
+        overlay.classList.toggle('show', open);
+        document.body.classList.toggle('nav-open', open);
+        burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+      }
+      burger.addEventListener('click', function () { setNav(!sidebar.classList.contains('open')); });
+      overlay.addEventListener('click', function () { setNav(false); });
+      // 触屏上「划」不触发 click：手指在遮罩上滑动也立即收起抽屉并解锁页面滚动
+      overlay.addEventListener('touchmove', function () { setNav(false); }, { passive: true });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setNav(false); });
+      sidebar.addEventListener('click', function (e) {
+        if (e.target.closest('a')) setNav(false);
+      });
     }
   }
 

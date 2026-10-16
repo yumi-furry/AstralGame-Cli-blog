@@ -62,11 +62,27 @@
       <tr><td><code>/api/smtp/send-now</code></td><td>POST</td><td>一键发送当前房间详情</td></tr>
       <tr><td><code>/api/update/check</code></td><td>GET</td><td>检查 GitHub 最新发行版</td></tr>
       <tr><td><code>/api/update/apply</code></td><td>POST</td><td>应用更新（<code>download_url</code>，仅 GitHub 白名单域名）</td></tr>
+      <tr><td><code>/api/audit-logs?tail=N</code></td><td>GET</td><td>最近 N 条操作记录（1.5.1_1 起）</td></tr>
       <tr><td><code>/api/auth/login</code></td><td>POST</td><td>登录（免鉴权）</td></tr>
       <tr><td><code>/api/auth/logout</code></td><td>POST</td><td>登出（免鉴权）</td></tr>
     </tbody>
   </table>
 </div>
+
+<h2 id="audit">操作记录（1.5.1_1 起）</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>接口</th><th>方法</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>/api/audit-logs?tail=N</code></td><td>GET</td><td>最近 N 条操作记录（默认 100，上限 500，新→旧排列）；保留最近 14 天、上限 2000 条</td></tr>
+    </tbody>
+  </table>
+</div>
+<div class="code">
+  <div class="code__head"><span>json</span></div>
+<pre><code>{"logs": [{"ts": 1792059565, "kind": "login", "action": "登录成功", "ip": "192.168.1.10"}]}</code></pre>
+</div>
+<p><code>kind</code> 取值：<code>login</code>（登录成功）、<code>login_failed</code>（登录失败）、<code>logout</code>（登出）、<code>modify</code>（修改操作）、<code>modify_denied</code>（未授权的非 GET 请求尝试）。第三方 WS 控制指令的 <code>action</code> 带「第三方服务指令：」前缀。</p>
 
 <h2 id="example">调用示例</h2>
 <div class="code">
